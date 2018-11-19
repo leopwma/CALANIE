@@ -17,13 +17,20 @@
 
 *******************************************************************************
    Program: CALANIE
+   
             CALculation of ANIsotropic Elastic interaction energy of
             a defect in periodic boundary conditions
+   
    Version: 1.8
+   
    Date:    18 Oct 2018
+   
    Author:  Pui-Wai (Leo) MA
+   
    Contact: leo.ma@ukaea.uk
+   
    Address: Culham Centre for Fusion Energy, OX14 3DB, United Kingdom
+
 ********************************************************************************
  
   This program calculate the elastic interaction energy of a defect with its
@@ -43,16 +50,22 @@
   1) g++ -DORIENTATION CALANIE_version.cpp
 
      This requires input of 
+     
      (1) Reference simulation box vectors
+     
      (2) Lattice unit for reference box vectors
+     
      (3) Relaxation volumes Omega1 and Omega2
+     
      (4) Orientation of the defect
 
      Put (1) to (3) in a file with name "input_data", and also the 
      "input_elastic". 
 
      Run the program by
+     
      ./a.out theta phi
+     
      where theta and phi are (4) Orientation of the defect
 
      Detail is in S. L. Dudarev and Pui-Wai Ma, 
@@ -61,20 +74,29 @@
   Or
 
   2) g++ -DABINITIO -DSTRESSeV CALANIE_version.cpp
+     
      or
+     
      g++ -DABINITIO -DSTRESSGPa CALANIE_version.cpp
 
      This require input of
+     
      (1) Reference simulation box vectors
+     
      (2) Lattice units for reference simulation box vectors
+     
      (3) Total marcoscopic stress of the reference simulation box (in eV or GPa) 
+     
      (4) Defect simulation box vectors
+     
      (5) Lattice units for defect simulation box vectors
+     
      (6) Total marcoscopic stress of the defect simulation box (in eV or GPa)
 
      Put (1) to (6) in a file with name "input_data"
 
      Run the program by
+     
      ./a.out
 
      Note:
@@ -87,14 +109,18 @@
 
 *******************************************************************************
  Optional:
-    (1) In the correct term, we are doing cubic sum. We can change it into
+
+(1) In the correct term, we are doing cubic sum. We can change it into
         spherical sum by adding -DSPHERICALSUM . 
-    (2) We observed that if we use cubic sum, the correction term tends to
+
+(2) We observed that if we use cubic sum, the correction term tends to
         zero, if we consider more neighbour cells. One can ignore the 
         calculation of the correction term by adding -DNOCORRECT. The default 
         value of Range_Neigh changes from 10 to 30. However, it is much faster.  
-    (3) (Very important) It is strongly recommended to add either 
+
+(3) (Very important) It is strongly recommended to add either 
         -DSPHERICALSUM or -DNOCORRECT to the compilation, but not both.
+
 *******************************************************************************
 
   A sample "input_data" is given for both cases. "input_data_1" is for 1st 
