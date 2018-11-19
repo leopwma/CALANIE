@@ -120,6 +120,10 @@
 
 (3) <b>(Very important!!!)</b> It is strongly recommended to add either 
         -DSPHERICALSUM or -DNOCORRECT to the compilation, but not both.
+        
+        For accuracy, use -DSPHERICALSUM.
+        
+        For speed, use -DNOCORRECT.
 
 *******************************************************************************
 
