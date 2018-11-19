@@ -118,7 +118,7 @@
         calculation of the correction term by adding -DNOCORRECT. The default 
         value of Range_Neigh changes from 10 to 30. However, it is much faster.  
 
-(3) (Very important) It is strongly recommended to add either 
+(3) <b>(Very important!!!)</b> It is strongly recommended to add either 
         -DSPHERICALSUM or -DNOCORRECT to the compilation, but not both.
 
 *******************************************************************************
