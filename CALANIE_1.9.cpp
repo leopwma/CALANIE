@@ -390,7 +390,9 @@ int main(int argc, char **argv){
   
     double Jacobian2D[6] = {0e0, 0e0, 0e0, 0e0, 0e0, 0e0};
     for (int n = 0; n < 6; ++n)
-        Jacobian2D[n] = sqrt(vec_dot(nn[n],nn[n]))/4e0;
+        Jacobian2D[n] = fabs(nn[n][0]+nn[n][1]+nn[n][2])/4e0;
+    //Det[a1 a2 a3] = Det[a1 a2] - Det[a1 a3] + Det[a2 a3]
+    //   [b1 b2 b3]      [b1 b2]      [b1 b3]      [b2 b3]
 
 
     //make them unit vector
@@ -460,16 +462,15 @@ int main(int argc, char **argv){
         for (int j = 0; j < 3; ++j)
             epsilon_corr[i][j] = 0e0;
 
-
     for (int i = 0; i < 3; ++i){
         for (int j = 0; j < 3; ++j){
              for (int n = 0; n < 6; ++n){
                 int_Gik_j_P_ka_n_a[n][i][j] *= Jacobian2D[n]; //for gaussian quadrature
-                epsilon_corr[i][j] += int_Gik_j_P_ka_n_a[n][i][j]/Volume;
+                epsilon_corr[i][j] += int_Gik_j_P_ka_n_a[n][i][j];
             }
-            cout << epsilon_corr[i][j] << " " << P[i][j] << '\n';
+            epsilon_corr[i][j] /= Volume;
+            //cout << epsilon_corr[i][j] << " " << P[i][j] << '\n';
             Estrain_corr += epsilon_corr[i][j]*P[i][j];
-            
         }
    }
 
