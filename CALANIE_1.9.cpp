@@ -390,9 +390,7 @@ int main(int argc, char **argv){
   
     double Jacobian2D[6] = {0e0, 0e0, 0e0, 0e0, 0e0, 0e0};
     for (int n = 0; n < 6; ++n)
-        Jacobian2D[n] = fabs(nn[n][0]+nn[n][1]+nn[n][2])/4e0;
-    //Det[a1 a2 a3] = Det[a1 a2] - Det[a1 a3] + Det[a2 a3]
-    //   [b1 b2 b3]      [b1 b2]      [b1 b3]      [b2 b3]
+        Jacobian2D[n] = sqrt(vec_dot(nn[n],nn[n]))/4e0;
 
 
     //make them unit vector
@@ -440,9 +438,7 @@ int main(int argc, char **argv){
                     r_vec_0[2] = (gq_pt[n_gq_1]*box_def_1[2] - box_def_2[2] + gq_pt[n_gq_2]*box_def_3[2])/2e0;
                 }
                 double Gik_j[3][3][3];
-                //double Gjk_i[3][3][3];
                 make_Gik_j(Cijkl, r_vec_0, Gik_j);
-                //make_Gik_j(Cijkl, r_vec_0, Gjk_i);
 
                 for (int i = 0; i < 3; ++i)
                     for (int j = 0; j < 3; ++j)
