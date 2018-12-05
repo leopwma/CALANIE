@@ -21,9 +21,9 @@
             CALculation of ANIsotropic Elastic interaction energy of
             a defect in periodic boundary conditions
    
-   Version: 1.8
+   Version: 1.9
    
-   Date:    18 Oct 2018
+   Date:    05 Dec 2018
    
    Author:  Pui-Wai (Leo) MA
    
