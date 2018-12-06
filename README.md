@@ -21,9 +21,9 @@
             CALculation of ANIsotropic Elastic interaction energy of
             a defect in periodic boundary conditions
    
-   Version: 1.9
+   Version: 2.0
    
-   Date:    05 Dec 2018
+   Date:    06 Dec 2018
    
    Author:  Pui-Wai (Leo) MA
    
@@ -108,25 +108,12 @@
      the line of "kB" in vasp "OUTCAR", where "kB" means kbar = 0.1GPa.
 
 *******************************************************************************
- Optional:
-
-(1) In the correct term, we are doing cubic sum. We can change it into
-        spherical sum by adding -DSPHERICALSUM . 
-
-(2) We observed that if we use cubic sum, the correction term tends to
-        zero, if we consider more neighbour cells. One can ignore the 
-        calculation of the correction term by adding -DNOCORRECT. The default 
-        value of Range_Neigh changes from 10 to 30. However, it is much faster.  
-
-(3) <b>(Very important!!!)</b> It is strongly recommended to add either 
-        -DSPHERICALSUM or -DNOCORRECT to the compilation, but not both.
-        
-        For accuracy, use -DSPHERICALSUM.
-        
-        For speed, use -DNOCORRECT.
+  A sperhical summation up to a radius equals to 10th neighbour cell is used 
+  for calculating the E_DD and E_DD_corr terms. 
+  
+  Please read "Note on elastic corrections".
 
 *******************************************************************************
-
   A sample "input_data" is given for both cases. "input_data_1" is for 1st 
   case. "input_data_2" is for 2nd case using -DSTRESSeV. 
 
