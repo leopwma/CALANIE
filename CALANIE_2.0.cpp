@@ -20,8 +20,8 @@
 *   Program: CALANIE
 *            CALculation of ANIsotropic Elastic interaction energy of
 *            a defect in periodic boundary conditions
-*   Version: 1.8
-*   Date:    18 Oct 2018
+*   Version: 2.0
+*   Date:    6 Dec 2018
 *   Author:  Pui-Wai (Leo) MA
 *   Contact: leo.ma@ukaea.uk
 *   Address: Culham Centre for Fusion Energy, OX14 3DB, United Kingdom
@@ -89,16 +89,6 @@
 *     the line of "kB" in vasp "OUTCAR", where "kB" means kbar = 0.1GPa.
 *
 ********************************************************************************
-* Optional:
-*    (1) In the correct term, we are doing cubic sum. We can change it into
-*        spherical sum by adding -DSPHERICALSUM . 
-*    (2) We observed that if we use cubic sum, the correction term tends to
-*        zero, if we consider more neighbour cells. One can ignore the 
-*        calculation of the correction term by adding -DNOCORRECT. The default 
-*        value of Range_Neigh changes from 10 to 30. However, it is much faster.  
-*    (3) (Very important) It is strongly recommended to add either 
-*        -DSPHERICALSUM or -DNOCORRECT to the compilation, but not both.
-********************************************************************************
 *
 *  A sample "input_data" is given for both cases. "input_data_1" is for 1st 
 *  case. "input_data_2" is for 2nd case using -DSTRESSeV. 
@@ -135,7 +125,7 @@ void make_Gik(double Cijkl[3][3][3][3], double r_vec[3], double Gir[3][3]);
 void make_Gik_j(double Cijkl[3][3][3][3], double r_vec[3], double Gir_s[3][3][3]);
 void make_Gik_jl(double Cijkl[3][3][3][3], double r_vec[3], double Gir_sm[3][3][3][3]);
 
-double Eint_pair(double Cijkl[3][3][3][3], double r_vec[3], double Pij[3][3]);
+double E_DD_pair(double Cijkl[3][3][3][3], double r_vec[3], double Pij[3][3]);
 
 #ifdef ORIENTATION
 void make_Pij(double Cijkl[3][3][3][3], char **argv, double Omega1, double Omega2, double Pij[3][3]);
@@ -236,40 +226,32 @@ int main(int argc, char **argv){
     cout << "P31 = " << P[2][0] << " eV \n";
     cout << "\n";
 
-    #ifdef NOCORRECT
-    int Range_Neigh = 30; // If defined NOCORRECT, one should not define SPERICALSUM. Using cubic sum can achieve 4 significant figures accuracy. 
-    #else
     int Range_Neigh = 10; // Using 10 should be enough for spherical summation, but can be increased for checking.
-    #endif
 
     int Range_x = Range_Neigh;
     int Range_y = Range_Neigh;
     int Range_z = Range_Neigh;
     int Range_r_sq = Range_Neigh*Range_Neigh;
 
-    double Eint_DD = 0e0;
+    double E_DD_total = 0e0;
     for (int p = -Range_x; p <= Range_x; ++p){
         for (int q = -Range_y; q <= Range_y; ++q){
             for (int r = -Range_z; r <= Range_z; ++r){
                 if (!(p == 0 && q == 0 && r == 0)){
-                    #ifdef SPHERICALSUM
                     double r0_sq = p*p + q*q + r*r;
                     if (r0_sq < Range_r_sq+ 0.01){
-                    #endif
                        double r_vec[3];
                        for (int m = 0 ; m < 3; ++m)
                            r_vec[m] = box_def_1[m]*p + box_def_2[m]*q + box_def_3[m]*r;
-                       Eint_DD += Eint_pair(Cijkl, r_vec, P);
-                    #ifdef SPHERICALSUM
+                       E_DD_total += E_DD_pair(Cijkl, r_vec, P);
                     }
-                    #endif
                 }
             }
         }
     }
-    Eint_DD /= 2.0;
+    E_DD_total /= 2.0;
 
-    double Eint_corr = 0e0;
+    double E_DD_corr = 0e0;
 
     //Gaussian Quadrature: 9 points
     int Ngq = 9;
@@ -296,90 +278,7 @@ int main(int argc, char **argv){
     double Volume = box_volume(box_def_1, box_def_2, box_def_3);
     cout << "Defected box volume = " << Volume << " A^3\n";
 
-    #ifndef NOCORRECT
-
-    double int_Gik_jl[3][3][3][3];
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            for (int k = 0; k < 3; ++k)
-                for (int l = 0; l < 3; ++l)
-                    int_Gik_jl[i][k][j][l] = 0e0;
-
-    //We only tested the rectangular reference box. 
-    //The correctness of the integration for orthorhombic cell is based on faith. 
-
-
-    for (int p = -Range_x; p <= Range_x; ++p){
-        for (int q = -Range_y; q <= Range_y; ++q){
-            for (int r = -Range_z; r <= Range_z; ++r){
-                if (!(p == 0 && q == 0 && r == 0)){
-                    #ifdef SPHERICALSUM
-                    double r0_sq = p*p + q*q + r*r;
-                    if (r0_sq < Range_r_sq+ 0.01){
-                    #endif
-                       double r_vec[3];
-                       for (int m = 0 ; m < 3; ++m)
-                           r_vec[m] = box_def_1[m]*p + box_def_2[m]*q + box_def_3[m]*r;
-
-                        for (int n_gq_1 = 0; n_gq_1 < Ngq; ++n_gq_1){
-                            for (int n_gq_2 = 0; n_gq_2 < Ngq; ++n_gq_2){
-                                for (int n_gq_3 = 0; n_gq_3 < Ngq; ++n_gq_3){
-                                    double r_vec_0[3];
-                                    r_vec_0[0] = r_vec[0] + (gq_pt[n_gq_1]*box_def_1[0] + gq_pt[n_gq_2]*box_def_2[0] + gq_pt[n_gq_3]*box_def_3[0])/2e0;
-                                    r_vec_0[1] = r_vec[1] + (gq_pt[n_gq_1]*box_def_1[1] + gq_pt[n_gq_2]*box_def_2[1] + gq_pt[n_gq_3]*box_def_3[1])/2e0;
-                                    r_vec_0[2] = r_vec[2] + (gq_pt[n_gq_1]*box_def_1[2] + gq_pt[n_gq_2]*box_def_2[2] + gq_pt[n_gq_3]*box_def_3[2])/2e0;
-                                    double Gik_jl[3][3][3][3];
-                                    make_Gik_jl(Cijkl, r_vec_0, Gik_jl);
-                                    for (int i = 0; i < 3; ++i)
-                                        for (int j = 0; j < 3; ++j)
-                                            for (int k = 0; k < 3; ++k)
-                                                for (int l = 0; l < 3; ++l)
-                                                    int_Gik_jl[i][k][j][l] += gq_wt[n_gq_1]*gq_wt[n_gq_2]*gq_wt[n_gq_3]*Gik_jl[i][k][j][l];
-                                }
-                            }
-                        }
-                    #ifdef SPHERICALSUM
-                    }
-                    #endif
-                }
-            }
-        }
-    }
-
-    double M[3][3];
-    for (int i = 0; i < 3; ++i){
-        M[0][i] = box_def_1[i];
-        M[1][i] = box_def_2[i];
-        M[2][i] = box_def_3[i];
-    }   
-    double Jacobian3D = Determinant(M)/8e0;
-    // rx = (ux + 1)/2 * Lxx + (uy + 1)/2 * Lyx + (uz + 1)/2 * Lzx
-    // ry = (ux + 1)/2 * Lxy + (uy + 1)/2 * Lyy + (uz + 1)/2 * Lzy
-    // rz = (ux + 1)/2 * Lxz + (uy + 1)/2 * Lyz + (uz + 1)/2 * Lzz
-    // Jacobian = | \parital (rx, ry, rz) / \partial (ux, uy, uz)|
-    //          = Determinant(Box_volume_tensor) / 8
-    cout << setprecision(16);
-    cout << "Jacobian3D = " << Jacobian3D << " A^3\n\n";
-
-    for (int i = 0; i < 3; ++i)
-        for (int k = 0; k < 3; ++k)
-            for (int j = 0; j < 3; ++j)
-                for (int l = 0; l < 3; ++l)
-                    int_Gik_jl[i][k][j][l] *= Jacobian3D/Volume;
-
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            for (int k = 0; k < 3; ++k)
-                for (int l = 0; l < 3; ++l)
-                    Eint_corr += P[i][j]*int_Gik_jl[i][k][j][l]*P[k][l];
-    Eint_corr /= 2.0;
-
-    #endif /*NOCORRECT*/
-
-
-    double Estrain_corr = 0e0;
-
-    // create 6 surface vectors
+    // create 6 surface unit vectors
     double nn[6][3];
     vec_cross(box_def_1, box_def_2, nn[0]);    //top
     vec_cross(box_def_2, box_def_3, nn[1]);    //right
@@ -390,8 +289,11 @@ int main(int argc, char **argv){
   
     double Jacobian2D[6] = {0e0, 0e0, 0e0, 0e0, 0e0, 0e0};
     for (int n = 0; n < 6; ++n)
-        Jacobian2D[n] = sqrt(vec_dot(nn[n],nn[n]))/4e0;
-
+        Jacobian2D[n] = sqrt(vec_dot(nn[n],nn[n]))/4e0; 
+    //Value of Jacobian2D is according to surface integral
+    //Factor of 4 is from Gaussian Quadrature for u=[-1 to 1] and v=[-1 to 1]
+    //We only tested the rectangular reference box. 
+    //The correctness of the integration for orthorhombic cell is based on faith. 
 
     //make them unit vector
     for (int n = 0; n < 6; ++n){
@@ -401,7 +303,94 @@ int main(int argc, char **argv){
         }
     }
 
+
     double int_Gik_j_P_ka_n_a[6][3][3];  // 6 surface and i, j indexes
+    for (int n = 0; n < 6; ++n)
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                int_Gik_j_P_ka_n_a[n][i][j] = 0e0;
+
+    for (int p = -Range_x; p <= Range_x; ++p){
+        for (int q = -Range_y; q <= Range_y; ++q){
+            for (int r = -Range_z; r <= Range_z; ++r){
+                if (!(p == 0 && q == 0 && r == 0)){
+                    double r0_sq = p*p + q*q + r*r;
+                    if (r0_sq < Range_r_sq+ 0.01){
+                        double r_vec[3];
+                        for (int m = 0 ; m < 3; ++m)
+                            r_vec[m] = box_def_1[m]*p + box_def_2[m]*q + box_def_3[m]*r;
+
+                        for (int n = 0; n < 6; ++n){ //for 6 surfaces
+
+                            for (int n_gq_1 = 0; n_gq_1 < Ngq; ++n_gq_1){
+                                for (int n_gq_2 = 0; n_gq_2 < Ngq; ++n_gq_2){
+                                    double r_vec_0[3] = {0e0, 0e0, 0e0};
+                                    if (n == 0){  //top
+                                        r_vec_0[0] = r_vec[0] + (gq_pt[n_gq_1]*box_def_1[0] + gq_pt[n_gq_2]*box_def_2[0] + box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (gq_pt[n_gq_1]*box_def_1[1] + gq_pt[n_gq_2]*box_def_2[1] + box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (gq_pt[n_gq_1]*box_def_1[2] + gq_pt[n_gq_2]*box_def_2[2] + box_def_3[2])/2e0;
+                                    } else if (n == 1) { //right
+                                        r_vec_0[0] = r_vec[0] + (box_def_1[0] + gq_pt[n_gq_1]*box_def_2[0] + gq_pt[n_gq_2]*box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (box_def_1[1] + gq_pt[n_gq_1]*box_def_2[1] + gq_pt[n_gq_2]*box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (box_def_1[2] + gq_pt[n_gq_1]*box_def_2[2] + gq_pt[n_gq_2]*box_def_3[2])/2e0;
+                                    } else if (n == 2) { //back
+                                        r_vec_0[0] = r_vec[0] + (gq_pt[n_gq_1]*box_def_1[0] + box_def_2[0] + gq_pt[n_gq_2]*box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (gq_pt[n_gq_1]*box_def_1[1] + box_def_2[1] + gq_pt[n_gq_2]*box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (gq_pt[n_gq_1]*box_def_1[2] + box_def_2[2] + gq_pt[n_gq_2]*box_def_3[2])/2e0;
+                                    } else if (n == 3){  //bottom
+                                        r_vec_0[0] = r_vec[0] + (gq_pt[n_gq_1]*box_def_1[0] + gq_pt[n_gq_2]*box_def_2[0] - box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (gq_pt[n_gq_1]*box_def_1[1] + gq_pt[n_gq_2]*box_def_2[1] - box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (gq_pt[n_gq_1]*box_def_1[2] + gq_pt[n_gq_2]*box_def_2[2] - box_def_3[2])/2e0;
+                                    } else if (n == 4) { //left
+                                        r_vec_0[0] = r_vec[0] + (-box_def_1[0] + gq_pt[n_gq_1]*box_def_2[0] + gq_pt[n_gq_2]*box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (-box_def_1[1] + gq_pt[n_gq_1]*box_def_2[1] + gq_pt[n_gq_2]*box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (-box_def_1[2] + gq_pt[n_gq_1]*box_def_2[2] + gq_pt[n_gq_2]*box_def_3[2])/2e0;
+                                    } else if (n == 5) { //front
+                                        r_vec_0[0] = r_vec[0] + (gq_pt[n_gq_1]*box_def_1[0] - box_def_2[0] + gq_pt[n_gq_2]*box_def_3[0])/2e0;
+                                        r_vec_0[1] = r_vec[1] + (gq_pt[n_gq_1]*box_def_1[1] - box_def_2[1] + gq_pt[n_gq_2]*box_def_3[1])/2e0;
+                                        r_vec_0[2] = r_vec[2] + (gq_pt[n_gq_1]*box_def_1[2] - box_def_2[2] + gq_pt[n_gq_2]*box_def_3[2])/2e0;
+                                    }
+                                    double Gik_j[3][3][3];
+                                    make_Gik_j(Cijkl, r_vec_0, Gik_j);
+
+                                    for (int i = 0; i < 3; ++i)
+                                        for (int j = 0; j < 3; ++j)
+                                            for (int k = 0; k < 3; ++k)
+                                                for (int a = 0; a < 3; ++a)
+                                                    int_Gik_j_P_ka_n_a[n][i][j] += gq_wt[n_gq_1]*gq_wt[n_gq_2]*Gik_j[i][k][j]*P[k][a]*nn[n][a];
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    double epsilon_DD_corr[3][3];
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            epsilon_DD_corr[i][j] = 0e0;
+
+    for (int i = 0; i < 3; ++i){
+        for (int j = 0; j < 3; ++j){
+             for (int n = 0; n < 6; ++n){
+                int_Gik_j_P_ka_n_a[n][i][j] *= Jacobian2D[n]; //for gaussian quadrature
+                epsilon_DD_corr[i][j] += int_Gik_j_P_ka_n_a[n][i][j];
+            }
+            epsilon_DD_corr[i][j] /= Volume;
+            //cout << epsilon_corr[i][j] << " " << P[i][j] << '\n';
+            E_DD_corr += epsilon_DD_corr[i][j]*P[i][j];
+        }
+    }
+    E_DD_corr = -E_DD_corr;
+    E_DD_corr /= 2.0;
+
+
+    double Estrain_corr = 0e0;
+
+    //double int_Gik_j_P_ka_n_a[6][3][3];  // 6 surface and i, j indexes
     for (int n = 0; n < 6; ++n)
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
@@ -453,38 +442,37 @@ int main(int argc, char **argv){
 
 
 
-    double epsilon_corr[3][3];
+    double epsilon_strain_corr[3][3];
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
-            epsilon_corr[i][j] = 0e0;
+            epsilon_strain_corr[i][j] = 0e0;
 
     for (int i = 0; i < 3; ++i){
         for (int j = 0; j < 3; ++j){
              for (int n = 0; n < 6; ++n){
                 int_Gik_j_P_ka_n_a[n][i][j] *= Jacobian2D[n]; //for gaussian quadrature
-                epsilon_corr[i][j] += int_Gik_j_P_ka_n_a[n][i][j];
+                epsilon_strain_corr[i][j] += int_Gik_j_P_ka_n_a[n][i][j];
             }
-            epsilon_corr[i][j] /= Volume;
-            //cout << epsilon_corr[i][j] << " " << P[i][j] << '\n';
-            Estrain_corr += epsilon_corr[i][j]*P[i][j];
+            epsilon_strain_corr[i][j] /= Volume;
+            Estrain_corr += epsilon_strain_corr[i][j]*P[i][j];
         }
    }
-
+    Estrain_corr = - Estrain_corr;
     Estrain_corr /= 2.0; 
 
-    double Eint = Eint_DD - Eint_corr;
-    double Eel_corr = Eint - Estrain_corr;
+    double E_DD = E_DD_total + E_DD_corr;
+    double Eel_corr = E_DD + Estrain_corr;
 
-    cout << "Eint_DD       = " <<  Eint_DD	  <<  " eV\n";
-    cout << "Eint_corr     = " <<  Eint_corr      <<  " eV\n";
-    cout << "Estrain_corr  = " <<  Estrain_corr      <<  " eV\n";
-    cout << "Eint          = Eint_DD - Eint_corr   = " << Eint << " eV\n";
-    cout << "Eel_corr      = Eint - Estrain_corr   = " << Eel_corr << " eV\n";
+    cout << "E_DD_total                                = " << E_DD	   <<  " eV\n";
+    cout << "E_DD_corr                                 = " << E_DD_corr    <<  " eV\n";
+    cout << "Estrain_corr                              = " << Estrain_corr <<  " eV\n";
+    cout << "E_DD             = E_DD_total + E_DD_corr = " << E_DD         << " eV\n";
+    cout << "Eel_corr         = E_DD + Estrain_corr    = " << Eel_corr     << " eV\n";
     cout << "\n";
  
-    cout << "Eint_DD      = 1/2 * Sum Eint_pair (R_n)\n";
-    cout << "Eint_corr    = 1/2 int_V_cell Sum Eint_pair (R_n - r) dV\n";
-    cout << "Estrain_corr = 1/2 int_V_cell Pij int_S Gik_j (R) P_ka n_a dS\n";
+    cout << "E_DD_total       =   1/2 * Sum P_ij Gik_jl(R_n - r) P_kl\n";
+    cout << "E_DD_corr        = - 1/2 int_V_cell Sum P_ij int_S Gik_j (R_- r) P_ka n_a dS\n";
+    cout << "Estrain_corr     = - 1/2 int_V_cell P_ij int_S Gik_j (R) P_ka n_a dS\n";
     cout << "\n";
 
     cout << "E_F(isolated defect) = E_F(defect with periodic images) - Eel_corr\n";
@@ -1023,7 +1011,7 @@ void vec_cross(double a[3], double b[3], double c[3]){
 }
 
 
-double Eint_pair(double Cijkl[3][3][3][3], double r_vec[3], double Pij[3][3]){
+double E_DD_pair(double Cijkl[3][3][3][3], double r_vec[3], double Pij[3][3]){
 
     double G[3][3][3][3];
     make_Gik_jl(Cijkl, r_vec, G);
