@@ -99,6 +99,8 @@
      
      ./a.out
 
+     Detail is in Pui-Wai Ma and  S. L. Dudarev, Physical Review Materials, 3 (1), 013605, (2019)
+
      Note:
      
      -DSTRESSeV means total stresses multiply volume. Unit is in eV. It is 
@@ -106,6 +108,7 @@
 
      -DSTRESSGPa means total stresses. Unit is in GPa. It is corresponding to 
      the line of "kB" in vasp "OUTCAR", where "kB" means kbar = 0.1GPa.
+
 
 *******************************************************************************
   A sperhical summation up to a radius equals to 10th neighbour cell is used 
