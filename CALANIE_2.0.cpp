@@ -20,8 +20,8 @@
 *   Program: CALANIE
 *            CALculation of ANIsotropic Elastic interaction energy of
 *            a defect in periodic boundary conditions
-*   Version: 2.0
-*   Date:    6 Dec 2018
+*   Version: 2.0.1
+*   Date:    29 May 2019
 *   Author:  Pui-Wai (Leo) MA
 *   Contact: leo.ma@ukaea.uk
 *   Address: Culham Centre for Fusion Energy, OX14 3DB, United Kingdom
@@ -158,16 +158,6 @@ int main(int argc, char **argv){
     double box_ref_2[3];
     double box_ref_3[3];
     double a_lattice_ref;
-
-    #ifdef ORIENTATION
-    double Omega1;
-    double Omega2;
-    read_input(Cij, Sij, 
-               box_ref_1, box_ref_2, box_ref_3, 
-               &a_lattice_ref, &Omega1, &Omega2);
-    #endif
-
-    #ifdef ABINITIO
     double stress_ref[3][3];
 
     double box_def_1[3];
@@ -176,6 +166,26 @@ int main(int argc, char **argv){
     double a_lattice_def;
     double stress_def[3][3];
 
+    #ifdef ORIENTATION
+    double Omega1;
+    double Omega2;
+    read_input(Cij, Sij, 
+               box_ref_1, box_ref_2, box_ref_3, 
+               &a_lattice_ref, &Omega1, &Omega2);
+
+    for (int i = 0; i < 3; ++i){
+        box_def_1[i] = box_ref_1[i];
+        box_def_2[i] = box_ref_2[i];
+        box_def_3[i] = box_ref_3[i];
+        for (int j = 0; j < 3; ++j){
+            stress_ref[i][j] = 0e0;
+            stress_def[i][j] = 0e0;
+        }
+    }
+    a_lattice_def = a_lattice_ref;
+    #endif
+
+    #ifdef ABINITIO
     read_input(Cij, Sij, 
                box_ref_1, box_ref_2, box_ref_3, 
                &a_lattice_ref, stress_ref, 
@@ -189,13 +199,11 @@ int main(int argc, char **argv){
         box_ref_3[i] *= a_lattice_ref;
     }
 
-    #ifdef ABINITIO
     for (int i = 0; i < 3; ++i){
         box_def_1[i] *= a_lattice_def;
         box_def_2[i] *= a_lattice_def;
         box_def_3[i] *= a_lattice_def;
     }
-    #endif
 
     double Cijkl[3][3][3][3];
     double Sijkl[3][3][3][3];
